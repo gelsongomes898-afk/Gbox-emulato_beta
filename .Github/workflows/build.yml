@@ -1,0 +1,26 @@
+name: Build APK
+on: [workflow_dispatch, push]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descompactar projeto
+        run: |
+          unzip -q ./*.zip -d proj
+          echo "DIR=$(dirname "$(find proj -name settings.gradle.kts | head -1)")" >> $GITHUB_ENV
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - name: Aceitar licencas do SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: 8.7 }
+      - run: cd "$DIR" && gradle assembleDebug
+      - run: cp "$DIR/app/build/outputs/apk/debug/app-debug.apk" GBOX-Emulator-Beta0.1.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: beta-0.1-build-${{ github.run_number }}
+          name: GBOX Emulator Beta 0.1
+          files: GBOX-Emulator-Beta0.1.apk
